@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import './pages/product.dart';
 
 class Products extends StatelessWidget {
   final List<String> products;
@@ -12,7 +13,21 @@ class Products extends StatelessWidget {
       child: Column(
         children: <Widget>[
           Image.asset('assets/food.jpg'),
-          Text(products[index])
+          Text(products[index]),
+          ButtonBar(
+            alignment: MainAxisAlignment.center,
+            children: <Widget>[
+              FlatButton(
+                child: Text('Details'),
+                onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) => ProductPage(),
+                      ),
+                    ),
+              )
+            ],
+          )
         ],
       ),
     );
@@ -26,10 +41,11 @@ class Products extends StatelessWidget {
         itemCount: products.length,
       );
     } else {
-      productCards = Center(child: Text('No items found'))
+      productCards = Center(child: Text('No items found'));
     }
     return productCards;
   }
+
   @override
   Widget build(BuildContext context) {
     print('[Products Widget] build()');
