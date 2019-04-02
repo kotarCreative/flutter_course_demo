@@ -38,16 +38,10 @@ class ProductsAdminPage extends StatelessWidget {
                 automaticallyImplyLeading: false,
               ),
               ListTile(
-                title: Text('All Products'),
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (BuildContext context) => ProductsPage(),
-                    ),
-                  );
-                },
-              ),
+                  title: Text('All Products'),
+                  onTap: () {
+                    Navigator.pushReplacementNamed(context, '/');
+                  }),
             ],
           ),
         ),
