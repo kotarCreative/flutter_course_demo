@@ -44,7 +44,8 @@ class _MyAppState extends State<MyApp> {
           primarySwatch: Colors.deepOrange,
           accentColor: Colors.deepPurple),
       routes: {
-        '/': (BuildContext context) => ProductsPage(_products, _addProduct,  _deleteProduct),
+        '/': (BuildContext context) =>
+            ProductsPage(_products, _addProduct, _deleteProduct),
         '/admin': (BuildContext context) => ProductsAdminPage()
       },
       onGenerateRoute: (RouteSettings settings) {
@@ -64,6 +65,14 @@ class _MyAppState extends State<MyApp> {
           );
         }
         return null;
+      },
+      onUnknownRoute: (RouteSettings settings) {
+        return MaterialPageRoute(
+            builder: (BuildContext context) => ProductsPage(
+                  _products,
+                  _addProduct,
+                  _deleteProduct,
+                ));
       },
     );
   }
