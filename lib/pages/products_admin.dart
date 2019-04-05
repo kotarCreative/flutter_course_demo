@@ -42,10 +42,12 @@ class ProductsAdminPage extends StatelessWidget {
                 automaticallyImplyLeading: false,
               ),
               ListTile(
-                  title: Text('All Products'),
-                  onTap: () {
-                    Navigator.pushReplacementNamed(context, '/products');
-                  }),
+                leading: Icon(Icons.shop),
+                title: Text('All Products'),
+                onTap: () {
+                  Navigator.pushReplacementNamed(context, '/products');
+                },
+              ),
             ],
           ),
         ),
