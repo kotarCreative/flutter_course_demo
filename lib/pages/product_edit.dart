@@ -81,7 +81,7 @@ class _ProductEditPageState extends State<ProductEditPage> {
 
       productIndex == null
         ? addProduct(_newProduct)
-        : updateProduct(productIndex, _newProduct);
+        : updateProduct(_newProduct);
     Navigator.pushReplacementNamed(context, '/products');
   }
 

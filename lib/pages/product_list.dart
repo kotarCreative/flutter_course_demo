@@ -8,25 +8,21 @@ import '../models/product.dart';
 class ProductListPage extends StatelessWidget {
   ProductListPage();
 
-  Widget _buildEditButton(BuildContext context, int index) {
-    return ScopedModelDescendant<ProductsModel>(
-      builder: (
-        BuildContext context,
-        Widget child,
-        ProductsModel model,
-      ) {
-        return IconButton(
-          icon: Icon(Icons.edit),
-          onPressed: () {
-            model.selectProduct(index);
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (BuildContext context) {
-                  return ProductEditPage();
-                },
-              ),
-            );
-          },
+  Widget _buildEditButton(
+    BuildContext context,
+    int index,
+    ProductsModel model,
+  ) {
+    return IconButton(
+      icon: Icon(Icons.edit),
+      onPressed: () {
+        model.selectProduct(index);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (BuildContext context) {
+              return ProductEditPage();
+            },
+          ),
         );
       },
     );
@@ -35,7 +31,11 @@ class ProductListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScopedModelDescendant<ProductsModel>(
-      builder: (BuildContext context, Widget child, ProductsModel model) {
+      builder: (
+        BuildContext context,
+        Widget child,
+        ProductsModel model,
+      ) {
         final List<Product> products = model.products;
         return ListView.builder(
           itemBuilder: (BuildContext context, int index) {
@@ -60,7 +60,7 @@ class ProductListPage extends StatelessWidget {
                     ),
                     title: Text(products[index].title),
                     subtitle: Text('\$${products[index].price}'),
-                    trailing: _buildEditButton(context, index),
+                    trailing: _buildEditButton(context, index, model),
                   ),
                   Divider()
                 ],
