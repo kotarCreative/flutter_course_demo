@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:scoped_model/scoped_model.dart';
 
 import 'product_edit.dart';
-import '../scoped_models/products.dart';
+import '../scoped_models/main.dart';
 import '../models/product.dart';
 
 class ProductListPage extends StatelessWidget {
@@ -11,7 +11,7 @@ class ProductListPage extends StatelessWidget {
   Widget _buildEditButton(
     BuildContext context,
     int index,
-    ProductsModel model,
+    MainModel model,
   ) {
     return IconButton(
       icon: Icon(Icons.edit),
@@ -30,11 +30,11 @@ class ProductListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScopedModelDescendant<ProductsModel>(
+    return ScopedModelDescendant<MainModel>(
       builder: (
         BuildContext context,
         Widget child,
-        ProductsModel model,
+        MainModel model,
       ) {
         final List<Product> products = model.products;
         return ListView.builder(
