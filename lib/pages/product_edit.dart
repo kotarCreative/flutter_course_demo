@@ -55,8 +55,7 @@ class _ProductEditPageState extends State<ProductEditPage> {
     return TextFormField(
         decoration: InputDecoration(labelText: 'Product Price'),
         keyboardType: TextInputType.numberWithOptions(decimal: true),
-        initialValue:
-            product == null ? '' : product.price.toString(),
+        initialValue: product == null ? '' : product.price.toString(),
         validator: (String value) {
           if (value.isEmpty ||
               !RegExp(r'^(?:[1-9]\d*|0)?(?:\.\d+)?$').hasMatch(value)) {
@@ -68,21 +67,29 @@ class _ProductEditPageState extends State<ProductEditPage> {
         });
   }
 
-  void _submitForm(Function addProduct, Function updateProduct, [int productIndex]) {
+  void _submitForm(
+      Function addProduct, Function updateProduct, Function setSelectedProduct,
+      [int productIndex]) {
     if (!_formKey.currentState.validate()) {
       return;
     }
     _formKey.currentState.save();
-    Product _newProduct = Product(
-        title: _formData['title'],
-        description: _formData['description'],
-        price: _formData['price'],
-        image: _formData['image']);
 
-      productIndex == null
-        ? addProduct(_newProduct)
-        : updateProduct(_newProduct);
-    Navigator.pushReplacementNamed(context, '/products');
+    productIndex == null
+        ? addProduct(
+            title: _formData['title'],
+            description: _formData['description'],
+            image: _formData['image'],
+            price: _formData['price'],
+          )
+        : updateProduct(
+            title: _formData['title'],
+            description: _formData['description'],
+            image: _formData['image'],
+            price: _formData['price'],
+          );
+    Navigator.pushReplacementNamed(context, '/products')
+        .then((_) => setSelectedProduct(null));
   }
 
   Widget _buildSubmitButton() {
@@ -94,7 +101,8 @@ class _ProductEditPageState extends State<ProductEditPage> {
             onPressed: () => _submitForm(
                   model.addProduct,
                   model.updateProduct,
-                  model.selectedProductIndex
+                  model.selectProduct,
+                  model.selectedProductIndex,
                 ));
       },
     );
@@ -133,7 +141,8 @@ class _ProductEditPageState extends State<ProductEditPage> {
   Widget build(BuildContext context) {
     return ScopedModelDescendant<MainModel>(
       builder: (BuildContext context, Widget child, MainModel model) {
-        final Widget pageContent = _buildPageContent(context, model.selectedProduct);
+        final Widget pageContent =
+            _buildPageContent(context, model.selectedProduct);
         return model.selectedProductIndex == null
             ? pageContent
             : Scaffold(

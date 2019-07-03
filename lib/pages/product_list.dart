@@ -23,7 +23,9 @@ class ProductListPage extends StatelessWidget {
               return ProductEditPage();
             },
           ),
-        );
+        ).then((_) {
+          model.selectProduct(null);
+        });
       },
     );
   }
@@ -36,7 +38,7 @@ class ProductListPage extends StatelessWidget {
         Widget child,
         MainModel model,
       ) {
-        final List<Product> products = model.products;
+        final List<Product> products = model.allProducts;
         return ListView.builder(
           itemBuilder: (BuildContext context, int index) {
             return Dismissible(
