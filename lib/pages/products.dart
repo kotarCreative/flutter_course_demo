@@ -9,27 +9,35 @@ class ProductsPage extends StatefulWidget {
 
   ProductsPage(this.model);
 
-  @override State<StatefulWidget> createState() {
+  @override
+  State<StatefulWidget> createState() {
     return _ProductsPageState();
   }
 }
 
 class _ProductsPageState extends State<ProductsPage> {
-  @override void initState() {
+  @override
+  void initState() {
     widget.model.fetchProducts();
     super.initState();
   }
 
   Widget _buildProductsList() {
-    return ScopedModelDescendant<MainModel>(builder: (BuildContext context, Widget child, MainModel model) {
-      Widget content = Center(child: Text('No Products Found'),);
+    return ScopedModelDescendant<MainModel>(
+        builder: (BuildContext context, Widget child, MainModel model) {
+      Widget content = Center(
+        child: Text('No Products Found'),
+      );
       if (model.displayProducts.length > 0 && !model.isLoading) {
         content = Products();
       } else if (model.isLoading) {
         content = Center(child: CircularProgressIndicator());
       }
-      return content;
-    },);
+      return RefreshIndicator(
+        child: content,
+        onRefresh: model.fetchProducts,
+      );
+    });
   }
 
   @override
