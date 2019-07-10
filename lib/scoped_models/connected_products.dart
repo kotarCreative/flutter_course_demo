@@ -9,7 +9,7 @@ import '../models/user.dart';
 
 mixin ConnectedProductsModel on Model {
   List<Product> _products = [];
-  int _selProductIndex;
+  String _selProductId;
   User _authenticatedUser;
   bool _isLoading = false;
 
@@ -64,15 +64,18 @@ mixin ProductsModel on ConnectedProductsModel {
         : List.from(_products);
   }
 
-  int get selectedProductIndex {
-    return _selProductIndex;
+  String get selectedProductId {
+    return _selProductId;
   }
 
+  int get selectedProductIndex {
+    return _products.indexWhere((Product product) => product.id == _selProductId);
+  }
   Product get selectedProduct {
-    if (_selProductIndex == null) {
+    if (_selProductId == null) {
       return null;
     }
-    return _products[_selProductIndex];
+    return _products.firstWhere((Product product) => product.id == _selProductId);
   }
 
   bool get showFavorites {
@@ -82,15 +85,14 @@ mixin ProductsModel on ConnectedProductsModel {
   void deleteProduct() {
     final String deletedProductId = selectedProduct.id;
     _isLoading = true; 
-    _products.removeAt(_selProductIndex);
-    _selProductIndex = null;
+    _products.removeAt(selectedProductIndex);
+    _selProductId = null;
     notifyListeners();
     http
         .delete(
             'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}.json')
         .then((http.Response response) {
       _isLoading = false;
-      _products.removeAt(_selProductIndex);
       notifyListeners();
     });
   }
@@ -101,7 +103,6 @@ mixin ProductsModel on ConnectedProductsModel {
     return http
         .get('https://flutter-products-ba1d6.firebaseio.com/products.json')
         .then((http.Response resp) {
-      _isLoading = false;
       final List<Product> productsList = [];
       final Map<String, dynamic> productsData = json.decode(resp.body);
       if (productsData != null) {
@@ -117,8 +118,10 @@ mixin ProductsModel on ConnectedProductsModel {
           productsList.add(newProduct);
         });
         _products = productsList;
+        _isLoading = false;
+        notifyListeners();
+        _selProductId = null;
       }
-      notifyListeners();
     });
   }
 
@@ -156,7 +159,7 @@ mixin ProductsModel on ConnectedProductsModel {
         userEmail: selectedProduct.userEmail,
         userId: selectedProduct.userId,
       );
-      _products[_selProductIndex] = newProduct;
+      _products[selectedProductIndex] = newProduct;
       notifyListeners();
     });
   }
@@ -174,14 +177,14 @@ mixin ProductsModel on ConnectedProductsModel {
       userId: selectedProduct.userId,
       isFavorite: newFavoriteStatus,
     );
-    _products[_selProductIndex] = updatedProduct;
-    _selProductIndex = null;
+    _products[selectedProductIndex] = updatedProduct;
+    _selProductId = null;
     notifyListeners();
   }
 
-  void selectProduct(int index) {
-    _selProductIndex = index;
-    if (index != null) {
+  void selectProduct(String productId) {
+    _selProductId = productId;
+    if (productId != null) {
       notifyListeners();
     }
   }
