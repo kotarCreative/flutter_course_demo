@@ -66,28 +66,28 @@ mixin ProductsModel on ConnectedProductsModel {
       'userId': _authenticatedUser.id,
     };
     try {
-    http.Response resp = await http.post(
-        'https://flutter-products-ba1d6.firebaseio.com/products.json',
-        body: json.encode(productData));
-    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      http.Response resp = await http.post(
+          'https://flutter-products-ba1d6.firebaseio.com/products.json',
+          body: json.encode(productData));
+      if (resp.statusCode != 200 && resp.statusCode != 201) {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
       _isLoading = false;
+      final Map<String, dynamic> respData = json.decode(resp.body);
+      final Product newProduct = Product(
+        id: respData['name'],
+        title: title,
+        description: description,
+        image: image,
+        price: price,
+        userEmail: _authenticatedUser.email,
+        userId: _authenticatedUser.id,
+      );
+      _products.add(newProduct);
       notifyListeners();
-      return false;
-    }
-    _isLoading = false;
-    final Map<String, dynamic> respData = json.decode(resp.body);
-    final Product newProduct = Product(
-      id: respData['name'],
-      title: title,
-      description: description,
-      image: image,
-      price: price,
-      userEmail: _authenticatedUser.email,
-      userId: _authenticatedUser.id,
-    );
-    _products.add(newProduct);
-    notifyListeners();
-    return true;
+      return true;
     } catch (error) {
       _isLoading = false;
       notifyListeners();
@@ -228,6 +228,34 @@ mixin UsersModel on ConnectedProductsModel {
       email: email,
       password: password,
     );
+  }
+
+  Future<Map<String, dynamic>> signup(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+    final Map<String, dynamic> authData = {
+      'email': email,
+      'password': password,
+      'returnSecureToken': true
+    };
+    final http.Response response = await http.post(
+      'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=AIzaSyBSnpFuKZyNiqdHK0p1b10bffCT281TZuk',
+      body: json.encode(authData),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    final Map<String, dynamic> responseData = json.decode(response.body);
+    bool hasError = true;
+    String message = 'Something went wrong.';
+    if (responseData.containsKey('idToken')) {
+      hasError = false;
+      message = 'Authentication succeeded!';
+    } else if (responseData['error']['message'] == 'EMAIL_EXISTS') {
+      message = 'This email already exists.';
+    }
+    _isLoading = false;
+    notifyListeners();
+    return {'success': !hasError, 'message': message};
   }
 }
 
