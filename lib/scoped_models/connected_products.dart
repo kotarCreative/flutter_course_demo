@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:scoped_model/scoped_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product.dart';
 import '../models/user.dart';
@@ -68,7 +69,7 @@ mixin ProductsModel on ConnectedProductsModel {
     };
     try {
       http.Response resp = await http.post(
-          'https://flutter-products-ba1d6.firebaseio.com/products.json',
+          'https://flutter-products-ba1d6.firebaseio.com/products.json?auth=${_authenticatedUser.token}',
           body: json.encode(productData));
       if (resp.statusCode != 200 && resp.statusCode != 201) {
         _isLoading = false;
@@ -104,7 +105,7 @@ mixin ProductsModel on ConnectedProductsModel {
     notifyListeners();
     return http
         .delete(
-            'https://flutter-products-ba1d6.firebaseio.com/products/$deletedProductId.json')
+            'https://flutter-products-ba1d6.firebaseio.com/products/$deletedProductId.json?auth=${_authenticatedUser.token}')
         .then((http.Response response) {
       _isLoading = false;
       notifyListeners();
@@ -120,7 +121,8 @@ mixin ProductsModel on ConnectedProductsModel {
     _isLoading = true;
     notifyListeners();
     return http
-        .get('https://flutter-products-ba1d6.firebaseio.com/products.json')
+        .get(
+            'https://flutter-products-ba1d6.firebaseio.com/products.json?auth=${_authenticatedUser.token}')
         .then<Null>((http.Response resp) {
       final List<Product> productsList = [];
       final Map<String, dynamic> productsData = json.decode(resp.body);
@@ -168,7 +170,7 @@ mixin ProductsModel on ConnectedProductsModel {
 
     return http
         .put(
-            'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}.json',
+            'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}.json?auth=${_authenticatedUser.token}',
             body: json.encode(productData))
         .then((http.Response response) {
       _isLoading = false;
@@ -223,6 +225,10 @@ mixin ProductsModel on ConnectedProductsModel {
 }
 
 mixin UsersModel on ConnectedProductsModel {
+  User get user {
+    return _authenticatedUser;
+  }
+
   Future<Map<String, dynamic>> authenticate(String email, String password,
       [AuthMode mode = AuthMode.Login]) async {
     _isLoading = true;
@@ -253,6 +259,15 @@ mixin UsersModel on ConnectedProductsModel {
     if (responseData.containsKey('idToken')) {
       hasError = false;
       message = 'Authentication succeeded!';
+      _authenticatedUser = User(
+        id: responseData['localId'],
+        email: email,
+        token: responseData['idToken'],
+      );
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('token', responseData['idToken']);
+      prefs.setString('userEmail', email);
+      prefs.setString('userId', responseData['localId']);
     } else if (responseData['error']['message'] == 'EMAIL_NOT_FOUND') {
       message = 'This email was not found.';
     } else if (responseData['error']['message'] == 'INVALID_PASSWORD') {
@@ -263,6 +278,21 @@ mixin UsersModel on ConnectedProductsModel {
     _isLoading = false;
     notifyListeners();
     return {'success': !hasError, 'message': message};
+  }
+
+  void autoAuthenticate() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String token = prefs.getString('token');
+    final String email = prefs.getString('userEmail');
+    final String id = prefs.getString('userId');
+    if (token != null) {
+      _authenticatedUser = User(
+        email: email,
+        id: id,
+        token: token,
+      );
+      notifyListeners();
+    }
   }
 }
 
