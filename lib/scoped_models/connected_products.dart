@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import '../google_api_keys.dart';
 
 import 'package:scoped_model/scoped_model.dart';
 import 'package:http/http.dart' as http;
@@ -69,9 +70,10 @@ mixin ProductsModel on ConnectedProductsModel {
     };
     try {
       http.Response resp = await http.post(
-          'https://flutter-products-ba1d6.firebaseio.com/products.json?auth=${_authenticatedUser.token}',
+          'https://flutter-products-ba1d6.firebaseio.com/products.json',
           body: json.encode(productData));
       if (resp.statusCode != 200 && resp.statusCode != 201) {
+        print(resp.body);
         _isLoading = false;
         notifyListeners();
         return false;
@@ -105,7 +107,7 @@ mixin ProductsModel on ConnectedProductsModel {
     notifyListeners();
     return http
         .delete(
-            'https://flutter-products-ba1d6.firebaseio.com/products/$deletedProductId.json?auth=${_authenticatedUser.token}')
+            'https://flutter-products-ba1d6.firebaseio.com/products/$deletedProductId.json')
         .then((http.Response response) {
       _isLoading = false;
       notifyListeners();
@@ -122,7 +124,7 @@ mixin ProductsModel on ConnectedProductsModel {
     notifyListeners();
     return http
         .get(
-            'https://flutter-products-ba1d6.firebaseio.com/products.json?auth=${_authenticatedUser.token}')
+            'https://flutter-products-ba1d6.firebaseio.com/products.json')
         .then<Null>((http.Response resp) {
       final List<Product> productsList = [];
       final Map<String, dynamic> productsData = json.decode(resp.body);
@@ -170,7 +172,7 @@ mixin ProductsModel on ConnectedProductsModel {
 
     return http
         .put(
-            'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}.json?auth=${_authenticatedUser.token}',
+            'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}.json',
             body: json.encode(productData))
         .then((http.Response response) {
       _isLoading = false;
@@ -225,6 +227,8 @@ mixin ProductsModel on ConnectedProductsModel {
 }
 
 mixin UsersModel on ConnectedProductsModel {
+  Timer _authTimer;
+
   User get user {
     return _authenticatedUser;
   }
@@ -241,13 +245,13 @@ mixin UsersModel on ConnectedProductsModel {
 
     if (mode == AuthMode.Login) {
       response = await http.post(
-        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBSnpFuKZyNiqdHK0p1b10bffCT281TZuk',
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${googleApiKeys["firebase"]}',
         body: json.encode(authData),
         headers: {'Content-Type': 'application/json'},
       );
     } else {
       response = await http.post(
-        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=AIzaSyBSnpFuKZyNiqdHK0p1b10bffCT281TZuk',
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=${googleApiKeys["firebase"]}',
         body: json.encode(authData),
         headers: {'Content-Type': 'application/json'},
       );
@@ -264,10 +268,14 @@ mixin UsersModel on ConnectedProductsModel {
         email: email,
         token: responseData['idToken'],
       );
+      setAuthTimeout(int.parse(responseData['expiresIn']));
+      final DateTime now = DateTime.now();
+      final DateTime expiryTime = now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString('token', responseData['idToken']);
       prefs.setString('userEmail', email);
       prefs.setString('userId', responseData['localId']);
+      prefs.setString('expiryTime', expiryTime.toIso8601String());
     } else if (responseData['error']['message'] == 'EMAIL_NOT_FOUND') {
       message = 'This email was not found.';
     } else if (responseData['error']['message'] == 'INVALID_PASSWORD') {
@@ -283,16 +291,39 @@ mixin UsersModel on ConnectedProductsModel {
   void autoAuthenticate() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String token = prefs.getString('token');
-    final String email = prefs.getString('userEmail');
-    final String id = prefs.getString('userId');
+    final String expiryTimeString = prefs.getString('expiryTime');
     if (token != null) {
+      final DateTime now = DateTime.now();
+      final parsedExpiryTime =  DateTime.parse(expiryTimeString);
+      if (parsedExpiryTime.isBefore(now)) {
+        _authenticatedUser = null;
+        notifyListeners();
+        return;
+      }
+      final String email = prefs.getString('userEmail');
+      final String id = prefs.getString('userId');
+      final int tokenLifespan = parsedExpiryTime.difference(now).inSeconds; 
       _authenticatedUser = User(
         email: email,
         id: id,
         token: token,
       );
+      setAuthTimeout(tokenLifespan);
       notifyListeners();
     }
+  }
+
+  void logout() async {
+    _authenticatedUser = null;
+    _authTimer.cancel();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.remove('token');
+    prefs.remove('userEmail');
+    prefs.remove('userId');
+  }
+
+  void setAuthTimeout(int time) {
+    _authTimer = Timer(Duration(seconds: time), logout);
   }
 }
 
