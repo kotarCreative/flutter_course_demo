@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:rxdart/rxdart.dart';
+
 import '../google_api_keys.dart';
 
 import 'package:scoped_model/scoped_model.dart';
@@ -123,8 +125,7 @@ mixin ProductsModel on ConnectedProductsModel {
     _isLoading = true;
     notifyListeners();
     return http
-        .get(
-            'https://flutter-products-ba1d6.firebaseio.com/products.json')
+        .get('https://flutter-products-ba1d6.firebaseio.com/products.json')
         .then<Null>((http.Response resp) {
       final List<Product> productsList = [];
       final Map<String, dynamic> productsData = json.decode(resp.body);
@@ -227,10 +228,14 @@ mixin ProductsModel on ConnectedProductsModel {
 }
 
 mixin UsersModel on ConnectedProductsModel {
-  Timer _authTimer;
+  PublishSubject<bool> _userSubject = PublishSubject();
 
   User get user {
     return _authenticatedUser;
+  }
+
+  PublishSubject<bool> get userSubject {
+    return _userSubject;
   }
 
   Future<Map<String, dynamic>> authenticate(String email, String password,
@@ -268,14 +273,11 @@ mixin UsersModel on ConnectedProductsModel {
         email: email,
         token: responseData['idToken'],
       );
-      setAuthTimeout(int.parse(responseData['expiresIn']));
-      final DateTime now = DateTime.now();
-      final DateTime expiryTime = now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString('token', responseData['idToken']);
       prefs.setString('userEmail', email);
       prefs.setString('userId', responseData['localId']);
-      prefs.setString('expiryTime', expiryTime.toIso8601String());
+      _userSubject.add(true);
     } else if (responseData['error']['message'] == 'EMAIL_NOT_FOUND') {
       message = 'This email was not found.';
     } else if (responseData['error']['message'] == 'INVALID_PASSWORD') {
@@ -291,39 +293,26 @@ mixin UsersModel on ConnectedProductsModel {
   void autoAuthenticate() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String token = prefs.getString('token');
-    final String expiryTimeString = prefs.getString('expiryTime');
     if (token != null) {
-      final DateTime now = DateTime.now();
-      final parsedExpiryTime =  DateTime.parse(expiryTimeString);
-      if (parsedExpiryTime.isBefore(now)) {
-        _authenticatedUser = null;
-        notifyListeners();
-        return;
-      }
       final String email = prefs.getString('userEmail');
       final String id = prefs.getString('userId');
-      final int tokenLifespan = parsedExpiryTime.difference(now).inSeconds; 
       _authenticatedUser = User(
         email: email,
         id: id,
         token: token,
       );
-      setAuthTimeout(tokenLifespan);
+      _userSubject.add(true);
       notifyListeners();
     }
   }
 
   void logout() async {
     _authenticatedUser = null;
-    _authTimer.cancel();
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.remove('token');
     prefs.remove('userEmail');
     prefs.remove('userId');
-  }
-
-  void setAuthTimeout(int time) {
-    _authTimer = Timer(Duration(seconds: time), logout);
+    _userSubject.add(false);
   }
 }
 

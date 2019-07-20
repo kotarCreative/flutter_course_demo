@@ -29,6 +29,9 @@ dependencies:
   # Local storage
   shared_preferences: ^0.5.3+4
 
+  # ReactiveX
+  rxdart: ^0.22.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

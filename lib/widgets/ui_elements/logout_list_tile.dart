@@ -8,7 +8,6 @@ class LogoutListTile extends StatelessWidget {
     return ScopedModelDescendant(builder: (BuildContext context, Widget child, MainModel model,) {
       return ListTile(title: Text('Logout'), leading: Icon(Icons.exit_to_app), onTap: () {
         model.logout();
-        Navigator.of(context).pushNamed('/');
       },);
     },);
   }
