@@ -121,7 +121,7 @@ mixin ProductsModel on ConnectedProductsModel {
     });
   }
 
-  Future<Null> fetchProducts() {
+  Future<Null> fetchProducts({bool onlyForUser = false}) {
     _isLoading = true;
     notifyListeners();
     return http
@@ -132,19 +132,25 @@ mixin ProductsModel on ConnectedProductsModel {
       if (productsData != null) {
         productsData.forEach((String productId, dynamic productData) {
           final Product newProduct = Product(
-              id: productId,
-              title: productData['title'],
-              description: productData['description'],
-              image: productData['image'],
-              price: productData['price'],
-              userEmail: productData['userEmail'],
-              userId: productData['userId']);
+            id: productId,
+            title: productData['title'],
+            description: productData['description'],
+            image: productData['image'],
+            price: productData['price'],
+            userEmail: productData['userEmail'],
+            userId: productData['userId'],
+            isFavorite: productData['wishlistUsers'] && (productData['wishlistUsers'] as Map<String, dynamic>)
+                .containsKey(_authenticatedUser.id),
+          );
           productsList.add(newProduct);
         });
-        _products = productsList;
+        if (onlyForUser) {
+          _products = productsList.where((Product product) => product.userId == _authenticatedUser.id).toList();
+        } else {
+          _products = productsList;
+        }
         _isLoading = false;
         notifyListeners();
-        _selProductId = null;
       }
     }).catchError((error) {
       _isLoading = false;
@@ -196,9 +202,11 @@ mixin ProductsModel on ConnectedProductsModel {
     });
   }
 
-  void toggleProductFavoriteStatus() {
+  void toggleProductFavoriteStatus() async {
     final bool isCurrentlyFavorite = selectedProduct.isFavorite;
     final bool newFavoriteStatus = !isCurrentlyFavorite;
+
+    // Update local product
     final Product updatedProduct = Product(
       id: selectedProduct.id,
       title: selectedProduct.title,
@@ -210,8 +218,36 @@ mixin ProductsModel on ConnectedProductsModel {
       isFavorite: newFavoriteStatus,
     );
     _products[selectedProductIndex] = updatedProduct;
-    _selProductId = null;
     notifyListeners();
+
+    http.Response response;
+    if (newFavoriteStatus) {
+      response = await http.put(
+        'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}/wishlistUsers/${_authenticatedUser.id}.json',
+        body: json.encode(true),
+      );
+    } else {
+      response = await http.delete(
+          'https://flutter-products-ba1d6.firebaseio.com/products/${selectedProduct.id}/wishlistUsers/${_authenticatedUser.id}.json');
+    }
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      // Update local product
+      final Product updatedProduct = Product(
+        id: selectedProduct.id,
+        title: selectedProduct.title,
+        description: selectedProduct.description,
+        price: selectedProduct.price,
+        image: selectedProduct.image,
+        userEmail: selectedProduct.userEmail,
+        userId: selectedProduct.userId,
+        isFavorite: !newFavoriteStatus,
+      );
+      _products[selectedProductIndex] = updatedProduct;
+      _selProductId = null;
+      notifyListeners();
+    }
+    _selProductId = null;
   }
 
   void selectProduct(String productId) {
